@@ -1,0 +1,135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Certificates - CertiChain</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="../css/style.css" rel="stylesheet">
+</head>
+<body>
+
+  <div id="navbar"></div>
+
+  <section class="py-4">
+    <div class="container">
+      <div class="d-flex justify-content-between align-items-center mb-3">
+        <h2 class="mb-0">Certificates</h2>
+        <a href="issue.html" class="btn btn-success">Issue new</a>
+      </div>
+
+      <div class="card"><div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle">
+            <thead>
+              <tr>
+                <th>ID</th><th>Student</th><th>Type</th><th>Issued</th>
+                <th>Hash</th><th>Tx hash</th><th>Status</th><th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+        <div id="empty" class="text-secondary text-center py-4 d-none">No certificates yet. Issue the first one.</div>
+      </div></div>
+    </div>
+  </section>
+
+  <!-- QR modal -->
+  <div class="modal fade" id="qrModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content text-center">
+        <div class="modal-header">
+          <h5 class="modal-title" id="qrTitle">QR code</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <div id="qrBox" class="d-flex justify-content-center mb-3"></div>
+          <div class="mono-dark" id="qrLink"></div>
+          <small class="text-secondary">Scan this QR to open the public verification page.</small>
+        </div>
+        <div class="modal-footer justify-content-center">
+          <button class="btn btn-outline-secondary btn-sm" id="copyBtn">Copy link</button>
+          <button class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer class="certi-foot text-center py-3">
+    Developed by Prahalad Sah | 2K24CSUN01189 | Manav Rachna University
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  <script src="../js/app.js"></script>
+  <script>
+    const user = requireRole("ADMIN");
+
+    // Make text safe before putting it in HTML (security: stops script injection)
+    function esc(t) {
+      return String(t).replace(/[&<>"']/g, function (c) {
+        return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+      });
+    }
+
+    if (user) {
+      renderAdminNav("certificates.html");
+      showCertificates();
+    }
+
+    function showCertificates() {
+      const certs = DB.get("certificates", []);
+      let rows = "";
+      certs.forEach(function (c) {
+        const st = findStudent(c.studentId) || { name: "-" };
+        rows += "<tr>" +
+          "<td><b>" + esc(c.id) + "</b></td>" +
+          "<td>" + esc(st.name) + "</td>" +
+          "<td>" + esc(c.type) + "</td>" +
+          "<td>" + esc(c.date) + "</td>" +
+          '<td class="mono-dark" title="' + esc(c.hash) + '">' + esc(c.hash.slice(0, 10)) + "...</td>" +
+          '<td class="mono-dark" title="' + esc(c.tx) + '">' + esc(c.tx.slice(0, 10)) + "...</td>" +
+          '<td><span class="badge bg-success">' + esc(c.status) + "</span></td>" +
+          '<td class="text-nowrap">' +
+          '<button class="btn btn-outline-primary btn-sm me-1" onclick="showQR(\'' + esc(c.id) + '\')">QR</button>' +
+          '<button class="btn btn-outline-secondary btn-sm" onclick="downloadCert(\'' + esc(c.id) + '\')">Download</button>' +
+          "</td></tr>";
+      });
+      document.getElementById("rows").innerHTML = rows;
+      document.getElementById("empty").classList.toggle("d-none", certs.length > 0);
+    }
+
+    // The link inside the QR code
+    function verifyLink(id) {
+      const base = location.href.substring(0, location.href.lastIndexOf("/admin/"));
+      return base + "/verify.html?id=" + id;
+    }
+
+    function showQR(id) {
+      const link = verifyLink(id);
+      document.getElementById("qrTitle").textContent = "QR code for " + id;
+      document.getElementById("qrLink").textContent = link;
+      const box = document.getElementById("qrBox");
+      box.innerHTML = "";
+      new QRCode(box, { text: link, width: 200, height: 200 });
+
+      document.getElementById("copyBtn").onclick = function () {
+        navigator.clipboard.writeText(link);
+        this.textContent = "Copied!";
+      };
+      document.getElementById("copyBtn").textContent = "Copy link";
+      new bootstrap.Modal(document.getElementById("qrModal")).show();
+    }
+
+    function downloadCert(id) {
+      const c = DB.get("certificates", []).find(function (x) { return x.id === id; });
+      const blob = new Blob([base64ToBuffer(c.fileData)], { type: "application/pdf" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = c.id + ".pdf";
+      a.click();
+    }
+  </script>
+</body>
+</html>
