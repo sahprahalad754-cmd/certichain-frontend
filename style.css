@@ -1,0 +1,39 @@
+:root {
+  --navy: #14304f;
+  --green: #1f7a5c;
+  --soft: #f2f5f9;
+}
+
+body { background: var(--soft); color: #14243a; }
+
+.certi-nav { background: var(--navy); }
+.certi-nav .nav-link.active { border-bottom: 2px solid #5fd3b0; }
+
+.hero { padding-top: 3rem; padding-bottom: 3rem; }
+
+.hash-box {
+  background: var(--navy);
+  color: #cfe3f5;
+  border-radius: 12px;
+  padding: 20px;
+}
+.mono { font-family: Consolas, monospace; color: #7ee0bd; word-break: break-all; }
+.mono.bad { color: #ff8a80 !important; }
+
+.step-card { border-left: 4px solid var(--green); }
+.step-no {
+  display: inline-grid; place-items: center;
+  width: 30px; height: 30px; border-radius: 50%;
+  background: var(--green); color: #fff; font-weight: 700; margin-bottom: 8px;
+}
+
+.certi-foot {
+  background: #fff; border-top: 1px solid #dde4ed;
+  font-size: 13px; color: #5d6b7e;
+}
+
+/* Dashboard cards */
+.stat-card { border-left: 4px solid var(--green); }
+.stat-card.stat-red { border-left-color: #b42318; }
+.stat-num { font-size: 2rem; font-weight: 700; line-height: 1.1; }
+.mono-dark { font-family: Consolas, monospace; font-size: 13px; word-break: break-all; margin: 8px 0; }
