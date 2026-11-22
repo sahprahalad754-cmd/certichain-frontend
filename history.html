@@ -1,0 +1,133 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Verification History - CertiChain</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="css/style.css" rel="stylesheet">
+</head>
+<body>
+
+  <div id="navbar"></div>
+
+  <section class="py-4">
+    <div class="container">
+      <div class="d-flex justify-content-between align-items-center flex-wrap gap-2 mb-3">
+        <h2 class="mb-0">Verification History</h2>
+        <div class="d-flex gap-2">
+          <select class="form-select form-select-sm" id="filter">
+            <option value="ALL">All results</option>
+            <option value="VERIFIED">Verified</option>
+            <option value="TAMPERED">Tampered</option>
+            <option value="REGISTERED">Registered</option>
+            <option value="NOTFOUND">Not found</option>
+          </select>
+          <button class="btn btn-outline-danger btn-sm d-none" id="clearBtn">Clear all</button>
+        </div>
+      </div>
+
+      <div class="card"><div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-hover align-middle">
+            <thead>
+              <tr><th>#</th><th>Certificate</th><th>Verified by</th><th>Time</th><th>Uploaded hash</th><th>Blockchain hash</th><th>Result</th></tr>
+            </thead>
+            <tbody id="rows"></tbody>
+          </table>
+        </div>
+        <div id="empty" class="text-secondary text-center py-4 d-none">No verifications yet.</div>
+      </div></div>
+    </div>
+  </section>
+
+  <footer class="certi-foot text-center py-3">
+    Developed by Prahalad Sah | 2K24CSUN01189 | Manav Rachna University
+  </footer>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="js/app.js"></script>
+  <script>
+    function esc(t) {
+      return String(t).replace(/[&<>"']/g, function (c) {
+        return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+      });
+    }
+
+    // Only ADMIN and VERIFIER can see this page
+    const user = getUser();
+    if (!user || (user.role !== "ADMIN" && user.role !== "VERIFIER")) {
+      window.location.href = "login.html";
+    }
+
+    function renderNav() {
+      const links = user.role === "ADMIN"
+        ? [["admin/dashboard.html", "Dashboard"], ["admin/add-student.html", "Add Student"], ["admin/issue.html", "Issue Certificate"], ["admin/certificates.html", "Certificates"], ["drive.html", "Drive Verify"], ["history.html", "Verification History"]]
+        : [["verify.html", "Verify"], ["drive.html", "Drive Verify"], ["history.html", "My History"]];
+      let items = "";
+      links.forEach(function (l) {
+        items += '<li class="nav-item"><a class="nav-link' + (l[0] === "history.html" ? " active" : "") +
+                 '" href="' + l[0] + '">' + l[1] + "</a></li>";
+      });
+      document.getElementById("navbar").innerHTML =
+        '<nav class="navbar navbar-expand-lg navbar-dark certi-nav"><div class="container">' +
+        '<a class="navbar-brand fw-bold" href="index.html">CertiChain</a>' +
+        '<button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menu">' +
+        '<span class="navbar-toggler-icon"></span></button>' +
+        '<div class="collapse navbar-collapse" id="menu">' +
+        '<ul class="navbar-nav me-auto">' + items + "</ul>" +
+        '<span class="text-light small me-3">' + esc(user.name) + " (" + user.role + ")</span>" +
+        '<button class="btn btn-outline-light btn-sm" onclick="logoutRoot()">Logout</button>' +
+        "</div></div></nav>";
+    }
+    function logoutRoot() {
+      sessionStorage.removeItem("certichainUser");
+      window.location.href = "index.html";
+    }
+
+    const LABEL = { VERIFIED: "VERIFIED", TAMPERED: "TAMPERED", REGISTERED: "REGISTERED", NOTFOUND: "NOT FOUND" };
+    const COLOR = { VERIFIED: "success", TAMPERED: "danger", REGISTERED: "primary", NOTFOUND: "warning" };
+
+    function showHistory() {
+      let logs = DB.get("logs", []);
+      // Verifier sees only their own checks, admin sees all
+      if (user.role === "VERIFIER") logs = logs.filter(function (l) { return l.by === user.email; });
+
+      const f = document.getElementById("filter").value;
+      if (f !== "ALL") logs = logs.filter(function (l) { return l.status === f; });
+
+      let rows = "";
+      logs.slice().reverse().forEach(function (l) {
+        rows += "<tr>" +
+          "<td>" + esc(l.id) + "</td>" +
+          "<td><b>" + esc(l.certId) + "</b></td>" +
+          "<td>" + esc(l.by) + "</td>" +
+          "<td>" + esc(l.time) + "</td>" +
+          '<td class="mono-dark" title="' + esc(l.uploadedHash) + '">' + esc(l.uploadedHash.slice(0, 10)) + "</td>" +
+          '<td class="mono-dark" title="' + esc(l.blockchainHash) + '">' + esc(l.blockchainHash.slice(0, 10)) + "</td>" +
+          '<td><span class="badge bg-' + COLOR[l.status] + '">' + LABEL[l.status] + "</span></td></tr>";
+      });
+      document.getElementById("rows").innerHTML = rows;
+      document.getElementById("empty").classList.toggle("d-none", logs.length > 0);
+    }
+
+    if (user && (user.role === "ADMIN" || user.role === "VERIFIER")) {
+      renderNav();
+      showHistory();
+      document.getElementById("filter").addEventListener("change", showHistory);
+
+      // Only admin can clear the history
+      if (user.role === "ADMIN") {
+        const btn = document.getElementById("clearBtn");
+        btn.classList.remove("d-none");
+        btn.addEventListener("click", function () {
+          if (confirm("Delete all verification history?")) {
+            DB.set("logs", []);
+            showHistory();
+          }
+        });
+      }
+    }
+  </script>
+</body>
+</html>
